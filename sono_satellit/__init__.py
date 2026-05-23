@@ -118,27 +118,54 @@ def generate_shifted_masks(ds, thickness=20, shift_step=5):
     return all_mask_values, {**region, 'thickness': thickness, 'shift_step': shift_step}
 
 
+def extract_linea_alba(mask_values, info):
+    """
+    Identify the most likely position of the linea alba.
+
+    Uses the mask with the highest total pixel brightness as the best estimate.
+    The measurement point is the upper edge of that mask.
+
+    Returns a dict with:
+      mask_index   -- 1-based index of the brightest mask
+      x            -- pixel x coordinate (horizontal centre of the imaging region)
+      y            -- pixel y coordinate (upper edge of the brightest mask)
+      depth_cm     -- physical depth of the upper edge from the top of the imaging region
+    """
+    sums = [float(np.sum(v)) for v in mask_values]
+    best_i = int(np.argmax(sums))
+
+    x = (info['region_x0'] + info['region_x1']) // 2
+    y = info['region_y0'] + best_i * info['shift_step']
+    depth_cm = round(best_i * info['shift_step'] * info['physical_delta_y'], 4)
+
+    return {
+        'mask_index': best_i + 1,
+        'x': x,
+        'y': y,
+        'depth_cm': depth_cm,
+    }
+
+
 def process_image(image_path):
-    """Process one DICOM image and return a list of result rows."""
+    """Process one DICOM image and return a single-row result for the linea alba."""
     filename = os.path.basename(image_path)
-    results = []
 
     ds = pydicom.dcmread(image_path)
     mask_values, info = generate_shifted_masks(ds)
 
-    physical_delta_y = info['physical_delta_y']
-    thickness = info['thickness']
-    shift_step = info['shift_step']
+    linea_alba = extract_linea_alba(mask_values, info)
+    best_i = linea_alba['mask_index'] - 1  # convert back to 0-based index
+    sum_val = float(np.sum(mask_values[best_i]))
+    std_val = float(np.std(mask_values[best_i]))
 
-    for i, pixel_values in enumerate(mask_values):
-        mask_index = i + 1
-        sum_val = float(np.sum(pixel_values))
-        std_val = float(np.std(pixel_values))
-        # depth of mask centre from the top of the imaging region
-        depth_cm = (i * shift_step + thickness / 2) * physical_delta_y
-        results.append((filename, mask_index, sum_val, std_val, round(depth_cm, 4)))
-
-    return results
+    return [(
+        filename,
+        linea_alba['x'],
+        linea_alba['y'],
+        linea_alba['depth_cm'],
+        sum_val,
+        round(std_val, 4),
+    )]
 
 
 def _is_dicom(path):
@@ -170,7 +197,8 @@ def find_image_files(directory):
 def write_csv(results, output_path):
     with open(output_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['filename', 'mask_index', 'sum', 'std', 'depth_cm'])
+        writer.writerow(['filename', 'linea_alba_x', 'linea_alba_y', 'linea_alba_depth_cm',
+                         'sum', 'std'])
         for row in results:
             writer.writerow(row)
 
