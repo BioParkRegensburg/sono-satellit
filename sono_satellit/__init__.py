@@ -146,6 +146,48 @@ def extract_linea_alba(mask_values, info):
     }
 
 
+def save_debug_image(image_path, x, y, debug_dir='./debug-images'):
+    """
+    Save an annotated copy of a DICOM image with the linea alba point marked.
+
+    Draws a red circle and crosshair at (x, y) and writes the result to
+    debug_dir/<original_filename>.png.
+    """
+    ds = pydicom.dcmread(image_path)
+    pixel_array = ds.pixel_array
+
+    n_frames = int(getattr(ds, 'NumberOfFrames', 1))
+    if n_frames > 1:
+        pixel_array = pixel_array[0]
+
+    samples_per_pixel = int(getattr(ds, 'SamplesPerPixel', 1))
+    if samples_per_pixel > 1:
+        gray = cv2.cvtColor(pixel_array, cv2.COLOR_RGB2GRAY)
+    else:
+        gray = pixel_array
+
+    # Normalise to 8-bit if needed
+    if gray.dtype != np.uint8:
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+    # Draw circle + crosshair in red
+    color = (0, 0, 255)
+    radius = 12
+    thickness = 2
+    cv2.circle(bgr, (x, y), radius, color, thickness)
+    arm = radius + 8
+    cv2.line(bgr, (x - arm, y), (x + arm, y), color, thickness)
+    cv2.line(bgr, (x, y - arm), (x, y + arm), color, thickness)
+
+    os.makedirs(debug_dir, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(image_path))[0]
+    out_path = os.path.join(debug_dir, stem + '.png')
+    cv2.imwrite(out_path, bgr)
+    return out_path
+
+
 def process_image(image_path):
     """Process one DICOM image and return a single-row result for the linea alba."""
     filename = os.path.basename(image_path)
@@ -217,6 +259,11 @@ def main():
         default='./output.csv',
         help='Output CSV file path (default: ./output.csv)'
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Save annotated debug images to ./debug-images/'
+    )
 
     args = parser.parse_args()
 
@@ -244,6 +291,10 @@ def main():
             print(f"Processing: {os.path.basename(image_path)}")
             results = process_image(image_path)
             all_results.extend(results)
+            if args.debug:
+                row = results[0]
+                out_path = save_debug_image(image_path, x=row[1], y=row[2])
+                print(f"  Debug image saved: {out_path}")
         except Exception as e:
             print(f"Warning: Failed to process {image_path}: {e}", file=sys.stderr)
             continue
