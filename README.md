@@ -4,6 +4,7 @@ The Sono SATELLIT (Subcutaneous Adipose Tissue Extraction & Layer Localization I
 
 It reads physical pixel spacing directly from DICOM metadata (`SequenceOfUltrasoundRegions`, tag `0018,6011`) and sweeps a series of horizontal rectangular masks across the full imaging depth, recording pixel intensity statistics at each depth level.
 
+The project was created during the Healthcare Hackathon Regensburg 2026.
 
 ## Requirements
 
