@@ -123,5 +123,11 @@ def extract_skin_layer(gray, region, min_threshold=100, max_threshold=200):
 
     longest_run = max(runs, key=len)
 
-    # Lowest point (max y) of the continuous edge, mapped to full-image coordinates
-    return y_start + int(max(longest_run))
+    # Interpolate within the continuous edge run: 40% of the way from the
+    # top (min y) toward the bottom (max y). This places the marker between
+    # the outer and inner skin-echo edges, correcting the systematic offset
+    # seen with pure min(y) or max(y).
+    run_min = min(longest_run)
+    run_max = max(longest_run)
+    skin_y_crop = run_min + round(0.4 * (run_max - run_min))
+    return y_start + int(skin_y_crop)
