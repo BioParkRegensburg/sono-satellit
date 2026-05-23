@@ -36,25 +36,31 @@ DICOM files are detected automatically by their file signature — no specific e
 
 ## Output
 
-A CSV file with one row per mask position per image:
+A CSV file with **one row per image** containing the detected linea alba position:
 
 | Column | Description |
 |---|---|
 | `filename` | Source DICOM filename |
-| `mask_index` | 1-based index of the mask strip (top to bottom) |
-| `sum` | Sum of grayscale pixel values inside the mask |
-| `std` | Standard deviation of grayscale pixel values inside the mask |
-| `depth_cm` | Physical depth of the mask centre from the top of the imaging region (cm) |
-
-The number of rows per image is determined automatically from the imaging region height and a fixed step size of 5 pixels (e.g. a 660 px deep region produces 132 rows covering ~16.6 cm).
+| `linea_alba_x` | Pixel x coordinate of the measurement point (horizontal centre of the imaging region) |
+| `linea_alba_y` | Pixel y coordinate of the measurement point (upper edge of the brightest mask strip) |
+| `linea_alba_depth_cm` | Physical depth of the measurement point from the top of the imaging region (cm) |
+| `sum` | Total grayscale brightness of the detected mask strip |
+| `std` | Standard deviation of pixel intensities in the detected mask strip |
 
 
 ## How it works
 
 1. Each DICOM file is opened with `pydicom` and the imaging region bounds and physical scale (`PhysicalDeltaY`, cm/pixel) are read from `(0018,6011) SequenceOfUltrasoundRegions`.
-2. A 20-pixel-tall rectangular mask is placed at the top of the imaging region and shifted downward by 5 pixels at each step until the bottom of the region is reached.
-3. The mask spans the full horizontal width of the imaging region.
-4. For each mask position the grayscale pixel values are extracted and their sum and standard deviation are recorded alongside the physical depth in cm.
+2. A 20-pixel-tall rectangular mask is placed at the top of the imaging region and shifted downward by 5 pixels at each step until the bottom of the region is reached. The mask spans the full horizontal width of the imaging region.
+3. The mask with the highest total pixel brightness is selected as the most likely location of the linea alba.
+4. The upper edge of that mask is reported as the measurement point, converted to physical depth in cm using the DICOM scale factor.
+
+
+## Known limitations
+
+- **Burned-in annotation crosses**: clinician-placed markers (skin edge, linea alba) are rendered directly into the DICOM pixel data, despite the `BurnedInAnnotation` DICOM tag reading `NO`. There is no separate clean layer. When converted to grayscale the markers (RGB ≈ 61, 142, 84; ~111 in grayscale) fall within the normal tissue intensity range and occupy roughly 484 out of ~600 000 pixels in the imaging region. The resulting error in brightness measurements is considered minor and is currently not corrected.
+- **Single imaging region assumed**: only the first entry of `SequenceOfUltrasoundRegions` is used. Images with multiple regions (e.g. split-screen or Doppler overlays) are not supported.
+- **No skin edge detection**: the skin surface position cannot be read from DICOM metadata and is not computed from the image. The depth values reported are relative to the top of the transducer imaging region, not the skin surface.
 
 
 ## License
