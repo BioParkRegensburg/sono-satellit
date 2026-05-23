@@ -19,6 +19,7 @@ dependencies = [
   "opencv-python",
   "numpy",
   "matplotlib",
+  "pydicom",
 ]
 
 [tool.hatch.build.targets.wheel]

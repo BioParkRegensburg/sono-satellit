@@ -1,2 +1,5 @@
 .venv
 *.ipynb
+examples/
+__pycache__
+*.pyc
