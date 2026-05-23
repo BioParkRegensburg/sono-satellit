@@ -22,7 +22,7 @@ pip install -e .
 ## Usage
 
 ```sh
-python -m sono_satellit --input-dir <path/to/dicom/files> [--out-csv output.csv]
+python -m sono_satellit --input-dir <path/to/dicom/files> [--out-csv output.csv] [--debug] [--linea-alba-threshold 0.9]
 ```
 
 **Arguments:**
@@ -31,6 +31,8 @@ python -m sono_satellit --input-dir <path/to/dicom/files> [--out-csv output.csv]
 |---|---|---|
 | `--input-dir` | yes | Directory containing DICOM files to process |
 | `--out-csv` | no | Output CSV path (default: `./output.csv`) |
+| `--debug` | no | Save annotated images and brightness-curve graphs to `./debug-images/` |
+| `--linea-alba-threshold` | no | Fraction of peak brightness required to select the linea alba (default: `0.9`) |
 
 DICOM files are detected automatically by their file signature — no specific extension is required (files named `IM_1232`, `*.dcm`, etc. all work).
 
