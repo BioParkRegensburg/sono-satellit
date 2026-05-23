@@ -4,3 +4,4 @@ examples/
 __pycache__
 *.pyc
 output.csv
+debug-images

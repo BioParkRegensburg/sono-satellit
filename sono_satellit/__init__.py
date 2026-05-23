@@ -136,7 +136,7 @@ def generate_shifted_masks(ds, thickness=20, shift_step=5):
     return all_mask_values, {**region, 'thickness': thickness, 'shift_step': shift_step}
 
 
-def extract_linea_alba(mask_values, info, threshold=0.9, peak_min=0.7, drop=0.1):
+def extract_linea_alba(mask_values, info, threshold=0.9, peak_min=0.7, drop=0.05):
     """
     Identify the most likely position of the linea alba.
 
